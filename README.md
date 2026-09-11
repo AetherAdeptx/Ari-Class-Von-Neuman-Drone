@@ -1,7 +1,10 @@
 # Von Neuman Space Engineers Scripts
 
 This is an MDK2 C# workspace for Space Engineers programmable-block scripts.
-It is configured for the local Steam/Proton installation on this computer.
+
+> **Project status:** This project is currently incomplete and under active
+> development. Interfaces and behavior may change; do not use it as a
+> production flight controller without testing and review.
 
 ## Build and check
 
@@ -84,8 +87,8 @@ In Space Engineers, open a programmable block, choose **Edit**, then
   drone slots and 64 relay slots across seven assignable drone colors.
 - Add more `.cs` files when separating larger features; MDK2 combines them.
 - `mdk.ini` contains portable packaging settings.
-- `mdk.local.ini` contains this computer's game paths and is intentionally
-  ignored by Git.
+- `mdk.local.ini` contains local game paths and is intentionally ignored by
+  Git.
 
 The in-game scripting API is documented at:
 https://github.com/KeenSoftwareHouse/SpaceEngineersModAPI
@@ -139,14 +142,8 @@ snapshots are split into bounded IGC packets. Overlapping world-space collision
 trees merge confirmed-empty regions, while temporal cells keep the newest
 timestamp.
 
-Discovery uses eight tag-based IGC channels (`VON.NEUMAN.DISC.0` through `.7`),
-not numeric radio frequencies. Discovery mode sends an encrypted presence every
-15 seconds and listens for 60 Update1 frames. Broadcast mode sends every four
-frames. Monitor mode opens all eight listeners every 24 frames for a 60-frame
-window. An encrypted presence from an unregistered address is treated as an
-unidentified contact and updates `Enemy_Exposure_Time`; IGC cannot prove that a
-sender belongs to an enemy faction. Beacons are enabled only when the beacon
-flag is on and exposure or emergency conditions are active.
+Discovery, broadcast, and monitoring modes use the configured IGC radio
+channels. Beacons can be enabled for emergency or exposure conditions.
 
 Entering any cockpit or control seat automatically performs `reinit` and makes
 that controller the reference for forward, backward, up, down, left, and right.
@@ -179,13 +176,10 @@ interpreter processes up to `Tasks_Per_Frame` objects and
 commands are callable, and remote objects are accepted only from the configured
 mother ship or an assigned drone/relay address.
 
-Map synchronization and task/control packets use authenticated XTEA-CTR
-envelopes with a keyed block MAC and per-packet nonce. Every cooperating node
-must have the same `radio-key`. The included `VonNeuman-Change-Me` bootstrap
-key is only for initial setup and should be replaced. This compact custom layer
-is suitable for in-game privacy and packet rejection; it is not a substitute
-for an audited modern cryptographic protocol. A bounded runtime nonce cache
-rejects recently replayed encrypted packets.
+Map synchronization and task/control packets use authenticated encrypted
+envelopes. Configure the same shared key on cooperating nodes. This compact
+in-game layer is intended for privacy and packet rejection; it is not a
+substitute for an audited modern cryptographic protocol.
 
 `Velocity_Vector_Encounter_Detected` is `1` when the latest completed
 velocity-vector scan hit an entity and `0` when it completed clear. If no
