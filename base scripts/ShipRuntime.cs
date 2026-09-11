@@ -38,6 +38,11 @@ namespace IngameScript
             double _elapsedSeconds;
             double _heartbeatTimer;
 
+            public void SetAvoidanceDistancePerSpeed(double value) { _state.Avoidance_Distance_Per_Speed = Math.Max(0.1, Math.Min(50, value)); }
+            public double GetAvoidanceDistancePerSpeed() { return _state.Avoidance_Distance_Per_Speed; }
+            public string DumpRegistry() { _registry.UpdateSettings(); return _registry.EncodePersistent(); }
+            public string DumpDebug() { return "state=" + _state.Supervisor_State + ";need=" + _state.Need_Level + ";avoid=" + _state.Needs_Avoidance + ";speed=" + _state.Target_Speed.ToString("0.0") + ";blocks=" + _state.Blocks.Count; }
+
             public ShipRuntime(Program program)
             {
                 _program = program;

@@ -2,6 +2,7 @@ using Sandbox.ModAPI.Ingame;
 using SpaceEngineers.Game.ModAPI.Ingame;
 using System;
 using System.Collections.Generic;
+using VRageMath;
 
 namespace IngameScript
 {
@@ -126,6 +127,7 @@ namespace IngameScript
 
             void SelectAutomaticState()
             {
+                UpdateNeedHierarchy();
                 ShipState.SupervisorState state = _ship.Supervisor_State;
                 if (state == ShipState.SupervisorState.Evasion ||
                     state == ShipState.SupervisorState.Return_To_Base ||
@@ -162,6 +164,32 @@ namespace IngameScript
                 else
                     _ship.Supervisor_State =
                         ShipState.SupervisorState.Normal;
+            }
+
+            void UpdateNeedHierarchy()
+            {
+                _ship.Need_Level = 0;
+                if (_ship.Mother_Ship_Final_Destination != Vector3D.Zero &&
+                    !HasReturnResources())
+                {
+                    _ship.Need_Level = 1;
+                    _ship.Supervisor_State = ShipState.SupervisorState.Return_To_Base;
+                }
+                bool mother = (_ship.Node_Identity ?? "").IndexOf("Mother", StringComparison.OrdinalIgnoreCase) >= 0;
+                bool childrenPresent = true;
+                // Radio presence is reconciled by RadioNetwork; an empty list
+                // means there are no required children to wait for.
+                childrenPresent = _ship.Mother_Ship_Children.Count > 0;
+                _ship.Max_Speed = mother && childrenPresent ? 500 : mother ? 90 : 100;
+            }
+
+            bool HasReturnResources()
+            {
+                double distance = Vector3D.Distance(_ship.CurrentShipPosition,
+                    _ship.Mother_Ship_Final_Destination);
+                double fuel = 1;
+                if (_ship.Batteries.Count > 0) fuel = BatteryPercent() / 100.0;
+                return fuel > Math.Min(0.95, distance / 100000.0 + 0.1);
             }
 
             bool IsConnected()

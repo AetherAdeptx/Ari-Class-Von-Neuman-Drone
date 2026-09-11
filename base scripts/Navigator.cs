@@ -268,7 +268,7 @@ namespace IngameScript
                     _ship.Velocity_Vector_Encounter_Detected != 0;
                 _ship.Navigation_Dangerous_Space = danger;
                 double limit = danger ? _ship.Cruise_Speed :
-                    _ship.Travel_Speed;
+                    Math.Min(_ship.Travel_Speed, _ship.Max_Speed);
                 double distance = Vector3D.Distance(position, waypoint);
                 double targetSpeed = Math.Min(limit, Math.Max(2,
                     Math.Min(distance * 0.2, _ship.Target_Speed)));

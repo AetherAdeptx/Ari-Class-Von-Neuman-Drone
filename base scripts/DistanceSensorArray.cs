@@ -92,7 +92,7 @@ namespace IngameScript
                             : VelocityScanDistanceMeters;
                     TryVelocityRaycast(velocityDirection,
                         _ship.Velocity_Vector_Scan_Distance_Meters);
-                    UpdateAvoidanceRays(velocityDirection);
+                    UpdateAvoidanceRays(velocityDirection, speed);
                     travelDirection = FindDirection(velocityDirection);
                 }
                 else
@@ -111,6 +111,11 @@ namespace IngameScript
                     if (!moving || direction != travelDirection)
                         TryDirectionRaycast(direction, OtherScanDistanceMeters);
                 }
+            }
+
+            public double AvoidanceTriggerDistance(double speed)
+            {
+                return Math.Max(0, speed) * _ship.Avoidance_Distance_Per_Speed;
             }
 
             void TryVelocityRaycast(Vector3D direction, double distance)
@@ -144,15 +149,18 @@ namespace IngameScript
                 }
             }
 
-            void UpdateAvoidanceRays(Vector3D direction)
+            void UpdateAvoidanceRays(Vector3D direction, double speed)
             {
                 _ship.Needs_Avoidance = 0;
+                double safetyRange = speed >= 50 ? 2500 : ForwardSafetyRangeMeters;
+                // Keep aggregate load reasonable when several probes share a server.
+                int rayCount = speed >= 50 ? 9 : 7;
                 MatrixD frame = _ship.ReferenceController.WorldMatrix;
                 Vector3D right = frame.Right - direction * Vector3D.Dot(frame.Right, direction);
                 if (right.LengthSquared() < 0.001) right = frame.Up - direction * Vector3D.Dot(frame.Up, direction);
                 right.Normalize();
                 Vector3D up = Vector3D.Normalize(Vector3D.Cross(direction, right));
-                for (int i = 0; i < 10; i++)
+                for (int i = 0; i < rayCount; i++)
                 {
                     Vector3D offset;
                     double range;
@@ -161,7 +169,7 @@ namespace IngameScript
                         double a = i * Math.PI * 2 / 3;
                         offset = (right * Math.Cos(a) + up * Math.Sin(a)) *
                             Math.Max(2, _stateRadius() * 0.55);
-                        range = ForwardSafetyRangeMeters;
+                        range = safetyRange;
                     }
                     else
                     {
@@ -169,7 +177,7 @@ namespace IngameScript
                         Vector3D axis = j < 4
                             ? (j == 0 ? right : j == 1 ? -right : j == 2 ? up : -up)
                             : direction;
-                        offset = axis * ForwardWideOffsetMeters;
+                        offset = axis * (speed >= 50 ? 2500 : ForwardWideOffsetMeters);
                         range = ForwardWideRangeMeters;
                     }
                     if (TrySafetyRay(direction, offset, range))
@@ -192,7 +200,10 @@ namespace IngameScript
                     if (!camera.IsWorking || !camera.CanScan(target)) continue;
                     MyDetectedEntityInfo hit = RecordRaycast(camera, target);
                     _nextVelocityCamera = (_nextVelocityCamera + i + 1) % cameras.Count;
-                    return hit.HitPosition.HasValue;
+                    if (!hit.HitPosition.HasValue) return false;
+                    double speed = _ship.ReferenceController.GetShipSpeed();
+                    double hitDistance = Vector3D.Distance(camera.GetPosition(), hit.HitPosition.Value);
+                    return hitDistance <= AvoidanceTriggerDistance(speed);
                 }
                 return false;
             }

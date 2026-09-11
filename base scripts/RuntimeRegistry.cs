@@ -129,6 +129,8 @@ namespace IngameScript
                 Values["Radio_Node_Kind"] = _ship.Radio_Node_Kind.ToString();
                 Values["Radio_Slot"] = _ship.Radio_Slot.ToString();
                 Values["Radio_Color"] = _ship.Radio_Color.ToString();
+                Values["Registry_Node_Role"] = _ship.Node_Identity.IndexOf("Mother", System.StringComparison.OrdinalIgnoreCase) >= 0 ? "mother" : "drone";
+                Values["Mother_Ship_Children_Count"] = _ship.Mother_Ship_Children.Count.ToString();
                 Values["Discovery_Mode"] = _ship.Discovery_Mode.ToString();
                 Values["Broadcast_Mode"] = _ship.Broadcast_Mode.ToString();
                 Values["Monitor_Mode"] = _ship.Monitor_Mode.ToString();
@@ -140,6 +142,10 @@ namespace IngameScript
                 Values["Cruise_Speed"] = _ship.Cruise_Speed.ToString("0.0");
                 Values["Travel_Speed"] = _ship.Travel_Speed.ToString("0.0");
                 Values["Target_Speed"] = _ship.Target_Speed.ToString("0.0");
+                Values["Need_Level"] = _ship.Need_Level.ToString();
+                Values["Max_Speed"] = _ship.Max_Speed.ToString("0.0");
+                Values["Avoidance_Distance_Per_Speed"] =
+                    _ship.Avoidance_Distance_Per_Speed.ToString("0.0");
                 Values["Task_Object_Lines_Per_Frame"] =
                     _ship.Task_Object_Lines_Per_Frame.ToString();
                 Values["Task_Object_Queue_Count"] =
@@ -252,6 +258,10 @@ namespace IngameScript
                     double.TryParse(value, out number))
                     _ship.Travel_Speed = System.Math.Max(1,
                         System.Math.Min(100, number));
+                if (Values.TryGetValue("Avoidance_Distance_Per_Speed", out value) &&
+                    double.TryParse(value, out number))
+                    _ship.Avoidance_Distance_Per_Speed = System.Math.Max(0.1,
+                        System.Math.Min(50, number));
                 if (Values.TryGetValue("Task_Object_Lines_Per_Frame", out value) &&
                     int.TryParse(value, out integer))
                     _ship.Task_Object_Lines_Per_Frame = System.Math.Max(1,

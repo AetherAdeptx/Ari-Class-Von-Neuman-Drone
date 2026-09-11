@@ -11,15 +11,18 @@ namespace IngameScript
             public readonly string Phrase;
             public readonly string[] Lines;
             public readonly long Source;
+            public long LastCompleted;
+            public long Frequency;
             public int NextLine;
 
-            public TaskObject(string phrase, long source)
+            public TaskObject(string phrase, long source, long frequency = 0)
             {
                 Phrase = phrase ?? "";
                 Lines = Phrase.Replace('\r', '\n').Split(
                     new char[] { '\n', ';' },
                     StringSplitOptions.RemoveEmptyEntries);
                 Source = source;
+                Frequency = Math.Max(0, frequency);
             }
         }
 
@@ -59,16 +62,26 @@ namespace IngameScript
             public void Update(double elapsedSeconds)
             {
                 _elapsedSeconds += elapsedSeconds;
-                int objects = Math.Min(_ship.Tasks_Per_Frame, _tasks.Count);
-                for (int taskIndex = 0; taskIndex < objects; taskIndex++)
+                int budget = _ship.Tasks_Per_Frame;
+                int inspected = _tasks.Count;
+                while (budget > 0 && inspected-- > 0 && _tasks.Count > 0)
                 {
                     TaskObject task = _tasks.Dequeue();
+                    long now = (long)_elapsedSeconds;
+                    if (task.Frequency > 0 && now - task.LastCompleted < task.Frequency)
+                    { _tasks.Enqueue(task); continue; }
+                    budget--;
                     int lines = Math.Min(_ship.Task_Object_Lines_Per_Frame,
                         task.Lines.Length - task.NextLine);
                     for (int line = 0; line < lines; line++)
                         Execute(task.Lines[task.NextLine++]);
-                    if (task.NextLine < task.Lines.Length)
+                    if (task.NextLine >= task.Lines.Length)
+                        task.LastCompleted = now;
+                    if (task.NextLine < task.Lines.Length || task.Frequency > 0)
+                    {
+                        if (task.NextLine >= task.Lines.Length) task.NextLine = 0;
                         _tasks.Enqueue(task);
+                    }
                 }
                 _ship.Task_Object_Queue_Count = _tasks.Count;
             }

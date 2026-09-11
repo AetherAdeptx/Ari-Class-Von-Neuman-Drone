@@ -117,6 +117,10 @@ namespace IngameScript
             public double Velocity_Vector_Scan_Age_Seconds;
             public double Velocity_Vector_Encounter_Distance_Meters;
             public int Needs_Avoidance;
+            public int Need_Level;
+            public double Max_Speed = 100;
+            public Vector3D Mother_Ship_Final_Destination;
+            public readonly List<long> Mother_Ship_Children = new List<long>();
             public SupervisorState Supervisor_State = SupervisorState.Normal;
             public int Tasks_Per_Frame = 2;
             public int Supervisor_Queued_Tasks;
@@ -143,6 +147,7 @@ namespace IngameScript
             public double Cruise_Speed = 15;
             public double Travel_Speed = 100;
             public double Target_Speed = 25;
+            public double Avoidance_Distance_Per_Speed = 5;
             public int Task_Object_Lines_Per_Frame = 2;
             public int Navigation_Nodes_Per_Frame = 16;
             public int Navigation_Waypoint_Count;
