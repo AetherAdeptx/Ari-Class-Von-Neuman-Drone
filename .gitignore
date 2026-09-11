@@ -1,0 +1,9 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+
+# This file contains paths specific to this computer.
+mdk.local.ini

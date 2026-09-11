@@ -1,0 +1,21 @@
+namespace IngameScript
+{
+    public partial class Program
+    {
+        public int Hard_Stop
+        {
+            get { return _ship == null ? 0 : _ship.GetHardStop(); }
+        }
+
+        public void SetThrusterRotationFactor(double factor)
+        {
+            _ship.SetThrusterRotationFactor(factor);
+        }
+
+        public double GetThrusterRotationFactor()
+        {
+            return _ship.GetThrusterRotationFactor();
+        }
+
+    }
+}
