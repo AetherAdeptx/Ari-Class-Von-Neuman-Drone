@@ -24,6 +24,9 @@ namespace IngameScript
             const double FastScanSpeedMetersPerSecond = 25;
             const double OtherScanDistanceMeters = 1000;
             const double OtherScanIntervalSeconds = 4;
+            const double ForwardSafetyRangeMeters = 5000;
+            const double ForwardWideRangeMeters = 1500;
+            const double ForwardWideOffsetMeters = 3500;
 
             readonly ShipState _ship;
             readonly BspSpatialMap _map;
@@ -87,9 +90,9 @@ namespace IngameScript
                         speed > FastScanSpeedMetersPerSecond
                             ? FastVelocityScanDistanceMeters
                             : VelocityScanDistanceMeters;
-                    TryVelocityRaycast(
-                        velocityDirection,
+                    TryVelocityRaycast(velocityDirection,
                         _ship.Velocity_Vector_Scan_Distance_Meters);
+                    UpdateAvoidanceRays(velocityDirection);
                     travelDirection = FindDirection(velocityDirection);
                 }
                 else
@@ -113,6 +116,7 @@ namespace IngameScript
             void TryVelocityRaycast(Vector3D direction, double distance)
             {
                 List<IMyCameraBlock> cameras = _ship.DistanceSensors;
+                if (cameras.Count == 0) return;
                 for (int attempt = 0; attempt < cameras.Count; attempt++)
                 {
                     int index = _nextVelocityCamera % cameras.Count;
@@ -138,6 +142,59 @@ namespace IngameScript
                         return;
                     }
                 }
+            }
+
+            void UpdateAvoidanceRays(Vector3D direction)
+            {
+                _ship.Needs_Avoidance = 0;
+                MatrixD frame = _ship.ReferenceController.WorldMatrix;
+                Vector3D right = frame.Right - direction * Vector3D.Dot(frame.Right, direction);
+                if (right.LengthSquared() < 0.001) right = frame.Up - direction * Vector3D.Dot(frame.Up, direction);
+                right.Normalize();
+                Vector3D up = Vector3D.Normalize(Vector3D.Cross(direction, right));
+                for (int i = 0; i < 10; i++)
+                {
+                    Vector3D offset;
+                    double range;
+                    if (i < 3)
+                    {
+                        double a = i * Math.PI * 2 / 3;
+                        offset = (right * Math.Cos(a) + up * Math.Sin(a)) *
+                            Math.Max(2, _stateRadius() * 0.55);
+                        range = ForwardSafetyRangeMeters;
+                    }
+                    else
+                    {
+                        int j = i - 3;
+                        Vector3D axis = j < 4
+                            ? (j == 0 ? right : j == 1 ? -right : j == 2 ? up : -up)
+                            : direction;
+                        offset = axis * ForwardWideOffsetMeters;
+                        range = ForwardWideRangeMeters;
+                    }
+                    if (TrySafetyRay(direction, offset, range))
+                        _ship.Needs_Avoidance = 1;
+                }
+            }
+
+            double _stateRadius()
+            {
+                return Math.Max(5, _ship.Collision_Bounding_Radius_Meters);
+            }
+
+            bool TrySafetyRay(Vector3D direction, Vector3D offset, double range)
+            {
+                List<IMyCameraBlock> cameras = _ship.SensorsForward;
+                for (int i = 0; i < cameras.Count; i++)
+                {
+                    IMyCameraBlock camera = cameras[(_nextVelocityCamera + i) % cameras.Count];
+                    Vector3D target = camera.GetPosition() + direction * range + offset;
+                    if (!camera.IsWorking || !camera.CanScan(target)) continue;
+                    MyDetectedEntityInfo hit = RecordRaycast(camera, target);
+                    _nextVelocityCamera = (_nextVelocityCamera + i + 1) % cameras.Count;
+                    return hit.HitPosition.HasValue;
+                }
+                return false;
             }
 
             Vector3D GetSampleOffset(Vector3D direction)

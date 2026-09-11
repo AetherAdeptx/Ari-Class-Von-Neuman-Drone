@@ -116,6 +116,7 @@ namespace IngameScript
             public double Velocity_Vector_Scan_Distance_Meters = 2000;
             public double Velocity_Vector_Scan_Age_Seconds;
             public double Velocity_Vector_Encounter_Distance_Meters;
+            public int Needs_Avoidance;
             public SupervisorState Supervisor_State = SupervisorState.Normal;
             public int Tasks_Per_Frame = 2;
             public int Supervisor_Queued_Tasks;
