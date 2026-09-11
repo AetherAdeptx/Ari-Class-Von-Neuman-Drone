@@ -7,16 +7,6 @@ namespace IngameScript
             get { return _ship == null ? 0 : _ship.GetHardStop(); }
         }
 
-        public void SetThrusterRotationFactor(double factor)
-        {
-            _ship.SetThrusterRotationFactor(factor);
-        }
-
-        public double GetThrusterRotationFactor()
-        {
-            return _ship.GetThrusterRotationFactor();
-        }
-
         public void SetAvoidanceDistancePerSpeed(double metersPerSecond)
         {
             _ship.SetAvoidanceDistancePerSpeed(metersPerSecond);

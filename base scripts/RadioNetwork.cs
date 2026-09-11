@@ -242,6 +242,8 @@ namespace IngameScript
                 node.Address = source;
                 node.AntennaRangeMeters = Math.Max(0, range);
                 node.LastKnownLocation = position;
+                if (source == _ship.Mother_Ship_Address)
+                    _ship.Mother_Ship_Last_Position = position;
                 node.LastContactSeconds = (DateTime.UtcNow.Ticks -
                     621355968000000000L) / 10000000.0;
             }

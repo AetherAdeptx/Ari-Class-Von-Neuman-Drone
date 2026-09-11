@@ -20,15 +20,18 @@ namespace IngameScript
 
             readonly ShipState _ship;
             readonly TelemetryState _telemetry;
+            readonly OreMemory _oreMemory;
             readonly Dictionary<string, double> _lastAmounts =
                 new Dictionary<string, double>();
             readonly Dictionary<string, double> _lastSampleSeconds =
                 new Dictionary<string, double>();
 
-            public ResourceTelemetry(ShipState ship, TelemetryState telemetry)
+            public ResourceTelemetry(ShipState ship, TelemetryState telemetry,
+                OreMemory oreMemory)
             {
                 _ship = ship;
                 _telemetry = telemetry;
+                _oreMemory = oreMemory;
 
                 for (int i = 0; i < RawResourceNames.Length; i++)
                 {
@@ -74,6 +77,13 @@ namespace IngameScript
                             Math.Max(
                                 0,
                                 _telemetry.OreNetRatePerSecond[oreName]);
+                        if (amount > lastAmount &&
+                            (_ship.Supervisor_State ==
+                                ShipState.SupervisorState.Mining ||
+                             _ship.Supervisor_State ==
+                                ShipState.SupervisorState.Prospecting))
+                            _oreMemory.Mark(oreName,
+                                _ship.CurrentShipPosition, elapsedSeconds);
                     }
                 }
 

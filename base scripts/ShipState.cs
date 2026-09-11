@@ -20,7 +20,9 @@ namespace IngameScript
                 Track_Radio,
                 Search,
                 Docking,
-                Docked
+                Docked,
+                Prospecting,
+                Mining
             }
 
             public readonly List<IMyTerminalBlock> Blocks =
@@ -59,6 +61,9 @@ namespace IngameScript
                 new List<IMyShipConnector>();
             public readonly List<IMyBeacon> Beacons =
                 new List<IMyBeacon>();
+            public readonly List<IMyOreDetector> OreDetectors =
+                new List<IMyOreDetector>();
+            public readonly List<IMyShipDrill> Drills = new List<IMyShipDrill>();
 
             public IMyShipController ReferenceController;
             public Vector3D CurrentShipPosition;
@@ -86,12 +91,6 @@ namespace IngameScript
             public readonly List<IMyThrust> Left = new List<IMyThrust>();
             public readonly List<IMyThrust> Right = new List<IMyThrust>();
 
-            public readonly List<IMyThrust> PitchUp = new List<IMyThrust>();
-            public readonly List<IMyThrust> PitchDown = new List<IMyThrust>();
-            public readonly List<IMyThrust> YawLeft = new List<IMyThrust>();
-            public readonly List<IMyThrust> YawRight = new List<IMyThrust>();
-            public readonly List<IMyThrust> RollLeft = new List<IMyThrust>();
-            public readonly List<IMyThrust> RollRight = new List<IMyThrust>();
 
             public readonly List<IMyCameraBlock> SensorsForward =
                 new List<IMyCameraBlock>();
@@ -106,9 +105,6 @@ namespace IngameScript
             public readonly List<IMyCameraBlock> SensorsRight =
                 new List<IMyCameraBlock>();
 
-            // Reserved for the later flight-control module. Rotation lists are
-            // sorted most-effective to least-effective before this is applied.
-            public double Thruster_Rotation_Factor = 0.50;
             public int Spatial_Cache_Distance = 4;
             public int Hard_Stop;
             public int Velocity_Vector_Encounter_Detected;
@@ -118,9 +114,21 @@ namespace IngameScript
             public double Velocity_Vector_Encounter_Distance_Meters;
             public int Needs_Avoidance;
             public int Need_Level;
+            public int State_Priority;
+            public string State_Blocker = "";
             public double Max_Speed = 100;
-            public Vector3D Mother_Ship_Final_Destination;
+            public Vector3D Mother_Ship_Final_Destination = Vector3D.Zero;
+            public Vector3D Mother_Ship_Last_Position;
             public readonly List<long> Mother_Ship_Children = new List<long>();
+            public bool Mothership_Bound;
+            public double Mothership_Bound_Range = 3500;
+            public bool Mothership_In_Bounds = true;
+            public double Critical_Battery_Level = 15;
+            public int Drone_Mode = 1;
+            public bool Prospecting_Enabled;
+            public Vector3D Prospecting_Center;
+            public double Prospecting_Radius = 1000;
+            public int Prospecting_Sample;
             public SupervisorState Supervisor_State = SupervisorState.Normal;
             public int Tasks_Per_Frame = 2;
             public int Supervisor_Queued_Tasks;
@@ -155,13 +163,6 @@ namespace IngameScript
             public int Navigation_History_Count;
             public int Task_Object_Queue_Count;
 
-            public void SetThrusterRotationFactor(double factor)
-            {
-                Thruster_Rotation_Factor = System.Math.Max(
-                    0,
-                    System.Math.Min(1, factor));
-            }
-
             public void SetSpatialCacheDistance(int distance)
             {
                 Spatial_Cache_Distance = System.Math.Max(
@@ -189,6 +190,8 @@ namespace IngameScript
                 SolarRotors.Clear();
                 Connectors.Clear();
                 Beacons.Clear();
+                OreDetectors.Clear();
+                Drills.Clear();
                 Thrusters.Clear();
                 ReferenceController = null;
                 Negative_X_Most_Block = null;
@@ -205,12 +208,6 @@ namespace IngameScript
                 Left.Clear();
                 Right.Clear();
 
-                PitchUp.Clear();
-                PitchDown.Clear();
-                YawLeft.Clear();
-                YawRight.Clear();
-                RollLeft.Clear();
-                RollRight.Clear();
 
                 SensorsForward.Clear();
                 SensorsBackward.Clear();

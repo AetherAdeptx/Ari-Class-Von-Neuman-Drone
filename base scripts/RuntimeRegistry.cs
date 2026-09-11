@@ -10,6 +10,8 @@ namespace IngameScript
             readonly ShipState _ship;
             readonly RadioNetwork _radio;
             readonly GlobalTemporalBsp _globalMap;
+            OreMemory _oreMemory;
+            DestinationBook _destinations;
 
             public readonly Dictionary<string, string> Values =
                 new Dictionary<string, string>();
@@ -24,6 +26,13 @@ namespace IngameScript
                 _globalMap = globalMap;
             }
 
+            public void AttachMemory(OreMemory oreMemory,
+                DestinationBook destinations)
+            {
+                _oreMemory = oreMemory;
+                _destinations = destinations;
+            }
+
             public void UpdateSettings()
             {
                 double batteryCapacity = 0;
@@ -33,8 +42,6 @@ namespace IngameScript
                     batteryCapacity += _ship.Batteries[i].MaxStoredPower;
                     batteryCharge += _ship.Batteries[i].CurrentStoredPower;
                 }
-                Values["Thruster_Rotation_Factor"] =
-                    _ship.Thruster_Rotation_Factor.ToString("0.000");
                 Values["Spatial_Cache_Distance"] =
                     _ship.Spatial_Cache_Distance.ToString();
                 Values["Spatial_Buffer_Budget_MiB"] = "64";
@@ -143,6 +150,20 @@ namespace IngameScript
                 Values["Travel_Speed"] = _ship.Travel_Speed.ToString("0.0");
                 Values["Target_Speed"] = _ship.Target_Speed.ToString("0.0");
                 Values["Need_Level"] = _ship.Need_Level.ToString();
+                Values["State_Priority"] = _ship.State_Priority.ToString();
+                Values["State_Blocker"] = _ship.State_Blocker;
+                Values["Mothership_Bound"] = _ship.Mothership_Bound ? "1" : "0";
+                Values["Mothership_Bound_Range"] = _ship.Mothership_Bound_Range.ToString("0");
+                Values["Mothership_In_Bounds"] = _ship.Mothership_In_Bounds ? "1" : "0";
+                Values["Mother_Ship_Final_Destination"] =
+                    Coordinates(_ship.Mother_Ship_Final_Destination);
+                Values["Critical_Battery_Level"] = _ship.Critical_Battery_Level.ToString("0.0");
+                Values["Drone_Mode"] = _ship.Drone_Mode.ToString();
+                Values["Prospecting_Enabled"] = _ship.Prospecting_Enabled ? "1" : "0";
+                Values["Prospecting_Center"] = Coordinates(_ship.Prospecting_Center);
+                Values["Prospecting_Radius"] = _ship.Prospecting_Radius.ToString("0");
+                Values["Ore_Detectors"] = _ship.OreDetectors.Count.ToString();
+                Values["Drills"] = _ship.Drills.Count.ToString();
                 Values["Max_Speed"] = _ship.Max_Speed.ToString("0.0");
                 Values["Avoidance_Distance_Per_Speed"] =
                     _ship.Avoidance_Distance_Per_Speed.ToString("0.0");
@@ -160,6 +181,12 @@ namespace IngameScript
                     _ship.Navigation_History_Count.ToString();
                 Values["Navigation_History_Raw_Bytes"] =
                     NavigationMemory.RawBytes.ToString();
+                Values["Ore_Memory_Types"] =
+                    (_oreMemory == null ? 0 : _oreMemory.OreTypeCount).ToString();
+                Values["Ore_Memory_Locations"] =
+                    (_oreMemory == null ? 0 : _oreMemory.TotalLocationCount).ToString();
+                Values["Named_Destinations"] =
+                    (_destinations == null ? 0 : _destinations.Count).ToString();
             }
 
             public string EncodePersistent()
@@ -189,9 +216,6 @@ namespace IngameScript
                 int integer;
                 long address;
                 string value;
-                if (Values.TryGetValue("Thruster_Rotation_Factor", out value) &&
-                    double.TryParse(value, out number))
-                    _ship.SetThrusterRotationFactor(number);
                 if (Values.TryGetValue("Spatial_Cache_Distance", out value) &&
                     int.TryParse(value, out integer))
                     _ship.SetSpatialCacheDistance(integer);
@@ -250,6 +274,8 @@ namespace IngameScript
                     _ship.Free_Move = value != "0";
                 if (Values.TryGetValue("Target_Destination", out value))
                     TryCoordinates(value, out _ship.Target_Destination);
+                if (Values.TryGetValue("Mother_Ship_Final_Destination", out value))
+                    TryCoordinates(value, out _ship.Mother_Ship_Final_Destination);
                 if (Values.TryGetValue("Cruise_Speed", out value) &&
                     double.TryParse(value, out number))
                     _ship.Cruise_Speed = System.Math.Max(1,
@@ -262,6 +288,22 @@ namespace IngameScript
                     double.TryParse(value, out number))
                     _ship.Avoidance_Distance_Per_Speed = System.Math.Max(0.1,
                         System.Math.Min(50, number));
+                if (Values.TryGetValue("Mothership_Bound", out value))
+                    _ship.Mothership_Bound = value != "0";
+                if (Values.TryGetValue("Mothership_Bound_Range", out value) && double.TryParse(value, out number))
+                    _ship.Mothership_Bound_Range = System.Math.Max(100, System.Math.Min(50000, number));
+                if (Values.TryGetValue("Critical_Battery_Level", out value) && double.TryParse(value, out number))
+                    _ship.Critical_Battery_Level = System.Math.Max(0, System.Math.Min(100, number));
+                if (Values.TryGetValue("Drone_Mode", out value) && int.TryParse(value, out integer))
+                    _ship.Drone_Mode = System.Math.Max(0, System.Math.Min(2, integer));
+                if (_ship.Drone_Mode < 2)
+                    _ship.Free_Move = false;
+                if (Values.TryGetValue("Prospecting_Enabled", out value))
+                    _ship.Prospecting_Enabled = value != "0";
+                if (Values.TryGetValue("Prospecting_Center", out value))
+                    TryCoordinates(value, out _ship.Prospecting_Center);
+                if (Values.TryGetValue("Prospecting_Radius", out value) && double.TryParse(value, out number))
+                    _ship.Prospecting_Radius = System.Math.Max(100, System.Math.Min(50000, number));
                 if (Values.TryGetValue("Task_Object_Lines_Per_Frame", out value) &&
                     int.TryParse(value, out integer))
                     _ship.Task_Object_Lines_Per_Frame = System.Math.Max(1,

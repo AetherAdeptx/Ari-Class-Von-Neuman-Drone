@@ -82,7 +82,8 @@ namespace IngameScript
 
             bool MayMove()
             {
-                if (!_ship.Free_Move || _ship.Hard_Stop != 0 ||
+                if (_ship.Drone_Mode < 2 || !_ship.Free_Move ||
+                    _ship.Hard_Stop != 0 ||
                     _ship.ReferenceController == null)
                     return false;
                 ShipState.SupervisorState state = _ship.Supervisor_State;

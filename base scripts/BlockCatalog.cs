@@ -103,6 +103,12 @@ namespace IngameScript
                     IMyBeacon beacon = block as IMyBeacon;
                     if (beacon != null)
                         _state.Beacons.Add(beacon);
+                    IMyOreDetector detector = block as IMyOreDetector;
+                    if (detector != null)
+                        _state.OreDetectors.Add(detector);
+                    IMyShipDrill drill = block as IMyShipDrill;
+                    if (drill != null)
+                        _state.Drills.Add(drill);
                 }
                 _crawlIndex = 0;
             }

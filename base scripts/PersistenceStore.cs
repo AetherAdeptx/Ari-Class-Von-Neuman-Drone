@@ -12,23 +12,30 @@ namespace IngameScript
             readonly GlobalTemporalBsp _global;
             readonly RadioNetwork _radio;
             readonly RuntimeRegistry _registry;
+            readonly OreMemory _ore;
+            readonly DestinationBook _destinations;
 
             public PersistenceStore(BspSpatialMap local,
                 GlobalTemporalBsp global, RadioNetwork radio,
-                RuntimeRegistry registry)
+                RuntimeRegistry registry, OreMemory ore,
+                DestinationBook destinations)
             {
                 _local = local;
                 _global = global;
                 _radio = radio;
                 _registry = registry;
+                _ore = ore;
+                _destinations = destinations;
             }
 
             public string Encode()
             {
                 string registry = _registry.EncodePersistent();
                 string radio = _radio.Encode();
+                string ore = _ore.Encode(12000);
+                string destinations = _destinations.Encode(12000);
                 int payloadBudget = MaximumCharacters - registry.Length -
-                    radio.Length - 100;
+                    radio.Length - ore.Length - destinations.Length - 160;
                 int globalBudget = Math.Max(4, payloadBudget / 2);
                 string global = _global.Encode(globalBudget);
                 string local = _local.Encode(Math.Max(16,
@@ -38,6 +45,8 @@ namespace IngameScript
                 Append(text, radio);
                 Append(text, local);
                 Append(text, global);
+                Append(text, ore);
+                Append(text, destinations);
                 return text.ToString();
             }
 
@@ -52,17 +61,22 @@ namespace IngameScript
                 string radio;
                 string local;
                 string global;
+                string ore = "";
+                string destinations = "";
                 if (!Read(encoded, ref offset, out registry) ||
                     !Read(encoded, ref offset, out radio) ||
                     !Read(encoded, ref offset, out local) ||
                     !Read(encoded, ref offset, out global))
                     return false;
+                Read(encoded, ref offset, out ore);
+                Read(encoded, ref offset, out destinations);
                 if (!_registry.DecodePersistent(registry))
                     return false;
                 _local.SetSpatialCacheDistance(
                     int.Parse(_registry.Values["Spatial_Cache_Distance"]));
                 return _radio.Decode(radio) && _local.Decode(local) &&
-                    _global.Merge(global);
+                    _global.Merge(global) && _ore.Decode(ore) &&
+                    _destinations.Decode(destinations);
             }
 
             void Append(StringBuilder text, string value)

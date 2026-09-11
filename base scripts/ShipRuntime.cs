@@ -34,6 +34,9 @@ namespace IngameScript
             readonly NavigationMemory _navigationMemory;
             readonly TaskInterpreter _taskInterpreter;
             readonly DiscoveryManager _discovery;
+            readonly ProspectingManager _prospecting;
+            readonly OreMemory _oreMemory;
+            readonly DestinationBook _destinations;
             bool _isRunning;
             double _elapsedSeconds;
             double _heartbeatTimer;
@@ -52,7 +55,10 @@ namespace IngameScript
                 _thrusters = new ThrusterClassifier(_state);
                 _gyros = new GyroArray(_state);
                 _telemetry = new TelemetryState();
-                _resources = new ResourceTelemetry(_state, _telemetry);
+                _oreMemory = new OreMemory();
+                _destinations = new DestinationBook();
+                _resources = new ResourceTelemetry(_state, _telemetry,
+                    _oreMemory);
                 _fuels = new FuelTelemetry(_state, _telemetry);
                 _shipStats = new ShipStatsTelemetry(_state, _telemetry);
                 _resourceTargets = new ResourceTargets(program, _telemetry);
@@ -75,15 +81,19 @@ namespace IngameScript
                     _state, _telemetry, _solar);
                 _registry = new RuntimeRegistry(
                     _state, _radio, _globalMap);
+                _registry.AttachMemory(_oreMemory, _destinations);
                 _persistence = new PersistenceStore(
-                    _spatialMap, _globalMap, _radio, _registry);
+                    _spatialMap, _globalMap, _radio, _registry, _oreMemory,
+                    _destinations);
                 _navigator = new Navigator(
                     _state, _spatialMap, _globalMap);
                 _navigationMemory = new NavigationMemory();
                 _taskInterpreter = new TaskInterpreter(
-                    _state, _supervisor, _radio);
+                    _state, _supervisor, _radio, _registry, _destinations,
+                    _oreMemory);
                 _radio.TaskReceived = ReceiveTask;
                 _discovery = new DiscoveryManager(program, _state, _radio);
+                _prospecting = new ProspectingManager(_state, _oreMemory);
                 _scheduler = new TelemetryScheduler(
                     _telemetry,
                     _shipStats,
@@ -93,6 +103,7 @@ namespace IngameScript
                 _supervisor.Enqueue(
                     UpdateDistanceTask, true, _distanceSensors);
                 _supervisor.Enqueue(UpdateRadioTask, true, _radio);
+                _supervisor.Enqueue(UpdateProspectingTask, true, _prospecting);
             }
 
             public void Init()
@@ -219,8 +230,7 @@ namespace IngameScript
                     return;
                 }
 
-                if (TrySetThrusterRotationFactor(argument) ||
-                    TrySetSpatialCacheDistance(argument) ||
+                if (TrySetSpatialCacheDistance(argument) ||
                     TrySetCoordinates(argument, "home-base ", true) ||
                     TrySetCoordinates(argument, "assigned-dock ", false) ||
                     TrySetAutoTrackingLevel(argument) ||
@@ -231,7 +241,10 @@ namespace IngameScript
                     TrySetRadioColor(argument) ||
                     TrySetRadioKind(argument) ||
                     TrySetDiscoveryMode(argument) ||
+                    TrySetDroneMode(argument) ||
+                    TrySetNamedDestination(argument) ||
                     TrySetBeacon(argument) ||
+                    TryInterpreterCommand(argument) ||
                     TryNavigationCommand(argument) ||
                     TryRadioFreeMode(argument) ||
                     TrySendTask(argument) ||
@@ -249,13 +262,57 @@ namespace IngameScript
                 _navigationMemory.Update(_state,
                     _program.Runtime.TimeSinceLastRun.TotalSeconds);
                 _scheduler.Tick(_elapsedSeconds);
-                _discovery.Update();
+                if (_state.Drone_Mode != 0)
+                    _discovery.Update();
                 _heartbeatTimer += _program.Runtime.TimeSinceLastRun.TotalSeconds;
-                if (_heartbeatTimer >= 15)
+                if (_state.Drone_Mode != 0 && _heartbeatTimer >= 15)
                 {
                     _heartbeatTimer -= 15;
                     _radio.BroadcastHeartbeat();
                 }
+            }
+
+            bool TryInterpreterCommand(string argument)
+            {
+                if (argument == null) return false;
+                string line = null;
+                if (argument.StartsWith("task ", StringComparison.OrdinalIgnoreCase))
+                    line = argument.Substring(5);
+                else if (argument.Equals("dump-debug", StringComparison.OrdinalIgnoreCase))
+                {
+                    _program.Echo(DumpDebug());
+                    return true;
+                }
+                else if (argument.Equals("dump-registry", StringComparison.OrdinalIgnoreCase))
+                {
+                    string registry = DumpRegistry();
+                    _program.Echo(registry.Substring(0,
+                        Math.Min(3500, registry.Length)));
+                    return true;
+                }
+                else if (argument.StartsWith("set ", StringComparison.OrdinalIgnoreCase))
+                    line = argument;
+                if (line == null) return false;
+                _taskInterpreter.Enqueue(line, 0);
+                return true;
+            }
+
+            bool TryVector(string text, out Vector3D value)
+            {
+                string[] parts = text.Split(',');
+                double x;
+                double y;
+                double z;
+                if (parts.Length == 3 &&
+                    double.TryParse(parts[0], out x) &&
+                    double.TryParse(parts[1], out y) &&
+                    double.TryParse(parts[2], out z))
+                {
+                    value = new Vector3D(x, y, z);
+                    return true;
+                }
+                value = Vector3D.Zero;
+                return false;
             }
 
             public void Save()
@@ -268,19 +325,6 @@ namespace IngameScript
                 _isRunning = false;
                 _program.Runtime.UpdateFrequency = UpdateFrequency.None;
                 _program.Echo("Closed; run with argument 'init' to restart");
-            }
-
-            public void SetThrusterRotationFactor(double factor)
-            {
-                _state.SetThrusterRotationFactor(factor);
-                _registry.UpdateSettings();
-                _program.Echo("Thruster rotation factor: " +
-                    _state.Thruster_Rotation_Factor.ToString("0.000"));
-            }
-
-            public double GetThrusterRotationFactor()
-            {
-                return _state.Thruster_Rotation_Factor;
             }
 
             public int GetHardStop()
@@ -339,25 +383,6 @@ namespace IngameScript
                     _registry.UpdateSettings();
                 }
                 return decoded;
-            }
-
-            bool TrySetThrusterRotationFactor(string argument)
-            {
-                const string command = "rotation-factor ";
-                if (argument == null || !argument.StartsWith(
-                    command,
-                    StringComparison.OrdinalIgnoreCase))
-                    return false;
-
-                double factor;
-                bool parsed = double.TryParse(
-                    argument.Substring(command.Length).Trim(),
-                    out factor);
-                if (parsed)
-                    SetThrusterRotationFactor(factor);
-                else
-                    _program.Echo("Use: rotation-factor 0.0..1.0");
-                return true;
             }
 
             bool TrySetSpatialCacheDistance(string argument)
@@ -637,6 +662,48 @@ namespace IngameScript
                 return true;
             }
 
+            bool TrySetDroneMode(string argument)
+            {
+                const string command = "drone-mode ";
+                if (argument == null || !argument.StartsWith(command,
+                    StringComparison.OrdinalIgnoreCase))
+                    return false;
+                int mode;
+                if (int.TryParse(argument.Substring(command.Length).Trim(),
+                    out mode))
+                {
+                    _state.Drone_Mode = Math.Max(0, Math.Min(2, mode));
+                    if (_state.Drone_Mode < 2)
+                        _state.Free_Move = false;
+                    _registry.UpdateSettings();
+                    _program.Echo("Drone_Mode: " + _state.Drone_Mode);
+                }
+                else
+                    _program.Echo("Use: drone-mode 0|1|2");
+                return true;
+            }
+
+            bool TrySetNamedDestination(string argument)
+            {
+                const string command = "dest ";
+                if (argument == null || !argument.StartsWith(command,
+                    StringComparison.OrdinalIgnoreCase))
+                    return false;
+                string body = argument.Substring(command.Length);
+                int split = body.IndexOf(' ');
+                Vector3D position;
+                if (split > 0 && TryVector(body.Substring(split + 1),
+                    out position) && _destinations.Set(body.Substring(0, split),
+                    position))
+                {
+                    _registry.UpdateSettings();
+                    _program.Echo("Destination saved");
+                }
+                else
+                    _program.Echo("Use: dest NAME X,Y,Z");
+                return true;
+            }
+
             bool TrySetBeacon(string argument)
             {
                 const string command = "beacon ";
@@ -670,6 +737,9 @@ namespace IngameScript
                 if (argument != null && argument.StartsWith("target ",
                     StringComparison.OrdinalIgnoreCase))
                     line = "SET_DESTINATION " + argument.Substring(7);
+                else if (argument != null && argument.StartsWith("goto ",
+                    StringComparison.OrdinalIgnoreCase))
+                    line = "GOTO " + argument.Substring(5);
                 else if (argument != null && argument.StartsWith("free-move ",
                     StringComparison.OrdinalIgnoreCase))
                     line = "FREE_MOVE " + argument.Substring(10);
@@ -739,13 +809,23 @@ namespace IngameScript
 
             void UpdateDistanceTask(object[] parameters)
             {
+                if (_state.Drone_Mode == 0)
+                    return;
                 ((DistanceSensorArray)parameters[0]).Update(
                     _program.Runtime.TimeSinceLastRun.TotalSeconds);
             }
 
             void UpdateRadioTask(object[] parameters)
             {
+                if (_state.Drone_Mode == 0)
+                    return;
                 ((RadioNetwork)parameters[0]).Update(_elapsedSeconds);
+            }
+
+            void UpdateProspectingTask(object[] parameters)
+            {
+                ((ProspectingManager)parameters[0]).Update(
+                    _program.Runtime.TimeSinceLastRun.TotalSeconds);
             }
 
             void PrintStatus(string reason)
@@ -764,12 +844,6 @@ namespace IngameScript
                     _state.Down.Count + "/" +
                     _state.Left.Count + "/" +
                     _state.Right.Count);
-                _program.Echo("Pitch U/D: " +
-                    _state.PitchUp.Count + "/" + _state.PitchDown.Count);
-                _program.Echo("Yaw L/R: " +
-                    _state.YawLeft.Count + "/" + _state.YawRight.Count);
-                _program.Echo("Roll L/R: " +
-                    _state.RollLeft.Count + "/" + _state.RollRight.Count);
                 _program.Echo("Telemetry jobs: " +
                     _telemetry.UpdateNames.Count + " (2/tick)");
                 _program.Echo("Cameras F/B/U/D/L/R: " +
@@ -792,8 +866,6 @@ namespace IngameScript
                     (_spatialMap.EstimatedMemoryBytes /
                         (1024.0 * 1024.0)).ToString("0.000") + " MiB");
                 _program.Echo("Identity: " + _state.Node_Identity);
-                _program.Echo("Rotation factor: " +
-                    _registry.Values["Thruster_Rotation_Factor"]);
                 _program.Echo("Spatial cache trees/axis: " +
                     _registry.Values["Spatial_Cache_Distance"]);
                 _program.Echo("Hard stop: " + _state.Hard_Stop);
