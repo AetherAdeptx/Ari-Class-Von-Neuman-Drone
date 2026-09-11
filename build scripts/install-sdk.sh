@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if command -v dotnet >/dev/null 2>&1; then echo " .NET SDK: $(dotnet --version)"; exit 0; fi
 if command -v flatpak >/dev/null 2>&1; then
   flatpak install -y flathub org.freedesktop.Sdk//24.08 || true

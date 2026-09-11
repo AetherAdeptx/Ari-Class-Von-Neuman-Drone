@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 target=""
 if [[ -f "$root/mdk.local.ini" ]]; then target="$(sed -n 's/^output=//p' "$root/mdk.local.ini" | head -n1)"; fi
 if [[ -z "$target" ]]; then
