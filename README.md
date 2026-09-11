@@ -18,6 +18,10 @@ For a repeatable setup and Release build, run:
 ./build.sh
 ```
 
+Use `./install-sdk.sh` to install build prerequisites separately, or
+`./install-game-script.sh` to copy a completed packed script into the Linux
+Space Engineers script directory.
+
 The script restores NuGet packages, builds `VonNeuman.csproj` in Release
 configuration, and runs the MDK2 packager/minifier. If the .NET SDK is not
 already installed, it checks Flatpak first, then common native package stores

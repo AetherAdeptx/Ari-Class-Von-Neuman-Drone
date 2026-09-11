@@ -3,6 +3,7 @@ set -euo pipefail
 
 project_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$project_dir"
+trap 'echo "ERROR: build prerequisites or compilation failed. Run ./install-sdk.sh and review the output above." >&2' ERR
 
 dotnet_cmd=""
 # Prefer a Flatpak-provided SDK when available.
