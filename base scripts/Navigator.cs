@@ -271,17 +271,17 @@ namespace IngameScript
                     _ship.Travel_Speed;
                 double distance = Vector3D.Distance(position, waypoint);
                 double targetSpeed = Math.Min(limit, Math.Max(2,
-                    distance * 0.2));
+                    Math.Min(distance * 0.2, _ship.Target_Speed)));
                 Vector3D velocity = controller.GetShipVelocities().LinearVelocity;
-                Vector3D acceleration = (direction * targetSpeed - velocity) *
-                    0.5 - controller.GetNaturalGravity();
+                double speed = velocity.Length();
+                Vector3D acceleration = Vector3D.Zero;
+                if (_ship.Needs_Avoidance != 0 && speed > targetSpeed + 4)
+                    acceleration = -Vector3D.Normalize(velocity) * 5;
+                else if (speed < targetSpeed - 4)
+                    acceleration = direction * 5;
+                acceleration -= controller.GetNaturalGravity();
                 MatrixD frame = controller.WorldMatrix;
-                Apply(_ship.Forward, Vector3D.Dot(acceleration, frame.Forward));
-                Apply(_ship.Backward, Vector3D.Dot(acceleration, frame.Backward));
-                Apply(_ship.Up, Vector3D.Dot(acceleration, frame.Up));
-                Apply(_ship.Down, Vector3D.Dot(acceleration, frame.Down));
-                Apply(_ship.Left, Vector3D.Dot(acceleration, frame.Left));
-                Apply(_ship.Right, Vector3D.Dot(acceleration, frame.Right));
+                ApplyTranslation(acceleration, frame);
                 Face(direction);
                 controller.DampenersOverride = true;
             }
@@ -292,6 +292,16 @@ namespace IngameScript
                     acceleration / 5.0));
                 for (int i = 0; i < group.Count; i++)
                     group[i].ThrustOverridePercentage = power;
+            }
+
+            void ApplyTranslation(Vector3D acceleration, MatrixD frame)
+            {
+                Apply(_ship.Forward, Vector3D.Dot(acceleration, frame.Forward));
+                Apply(_ship.Backward, Vector3D.Dot(acceleration, frame.Backward));
+                Apply(_ship.Up, Vector3D.Dot(acceleration, frame.Up));
+                Apply(_ship.Down, Vector3D.Dot(acceleration, frame.Down));
+                Apply(_ship.Left, Vector3D.Dot(acceleration, frame.Left));
+                Apply(_ship.Right, Vector3D.Dot(acceleration, frame.Right));
             }
 
             void Face(Vector3D direction)

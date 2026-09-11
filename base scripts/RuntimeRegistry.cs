@@ -139,6 +139,7 @@ namespace IngameScript
                     Coordinates(_ship.Target_Destination);
                 Values["Cruise_Speed"] = _ship.Cruise_Speed.ToString("0.0");
                 Values["Travel_Speed"] = _ship.Travel_Speed.ToString("0.0");
+                Values["Target_Speed"] = _ship.Target_Speed.ToString("0.0");
                 Values["Task_Object_Lines_Per_Frame"] =
                     _ship.Task_Object_Lines_Per_Frame.ToString();
                 Values["Task_Object_Queue_Count"] =

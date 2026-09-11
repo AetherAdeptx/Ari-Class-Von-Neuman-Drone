@@ -142,6 +142,7 @@ namespace IngameScript
             public Vector3D Target_Destination;
             public double Cruise_Speed = 15;
             public double Travel_Speed = 100;
+            public double Target_Speed = 25;
             public int Task_Object_Lines_Per_Frame = 2;
             public int Navigation_Nodes_Per_Frame = 16;
             public int Navigation_Waypoint_Count;
