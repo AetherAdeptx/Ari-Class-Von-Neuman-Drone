@@ -1,6 +1,7 @@
 bin/
 obj/
 .tools/
+build scripts/VonNeuman.cs
 .vs/
 .vscode/
 *.user

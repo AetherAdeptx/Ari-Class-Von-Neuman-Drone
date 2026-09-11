@@ -7,6 +7,6 @@ if [[ -z "$target" ]]; then
   for p in "$HOME/.steam/steam/steamapps/compatdata/244850/pfx/drive_c/users/steamuser/AppData/Roaming/SpaceEngineers/IngameScripts/local" "$HOME/.local/share/Steam/steamapps/compatdata/244850/pfx/drive_c/users/steamuser/AppData/Roaming/SpaceEngineers/IngameScripts/local"; do [[ -d "$p" ]] && target="$p" && break; done
 fi
 [[ -n "$target" ]] || { echo "ERROR: Space Engineers IngameScripts/local directory not found." >&2; exit 1; }
-src="$(find "$root" -type f -name 'VonNeuman.cs' -o -name 'VonNeuman.txt' | head -n1)"
+src="$root/build scripts/VonNeuman.cs"
 [[ -n "$src" ]] || { echo "ERROR: packed VonNeuman script not found; run ./build.sh first." >&2; exit 1; }
 mkdir -p "$target"; cp "$src" "$target/VonNeuman.cs"; echo "Installed VonNeuman.cs to $target"

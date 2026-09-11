@@ -1,5 +1,11 @@
 # Von Neuman Space Engineers Scripts
 
+Made with Codex by AriStone.
+
+**Status:** Incomplete and under active development. The base script is
+currently approximately 68,000 characters; Space Engineers programmable
+blocks allow a maximum of 100,000 characters.
+
 This is an MDK2 C# workspace for Space Engineers programmable-block scripts.
 
 > **Project status:** This project is currently incomplete and under active
@@ -27,6 +33,8 @@ configuration, and runs the MDK2 packager/minifier. If the .NET SDK is not
 already installed, it checks Flatpak first, then common native package stores
 (DNF, APT, or Pacman), and finally bootstraps a local copy under the ignored
 `.tools/` directory. It uses the MDK2 paths configured by the local settings.
+Source files are kept in `base scripts/`; the generated packed script is kept
+separately at `build scripts/VonNeuman.cs` and is never used as source input.
 
 The build runs the Space Engineers whitelist analyzer, combines the C# source
 files, lightly minifies them to remain below the programmable block's
