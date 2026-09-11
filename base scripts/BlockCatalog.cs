@@ -115,11 +115,27 @@ namespace IngameScript
                         _crawlIndex = 0;
                     if (_crawlIndex == 0)
                         BeginCollisionScan();
-                    IMyTerminalBlock block = _state.Blocks[_crawlIndex++];
-                    RecordPosition(block);
-                    ScanCollisionBounds(block);
-                    if (_crawlIndex == _state.Blocks.Count)
-                        PublishCollisionBounds();
+                    Vector3D origin = _state.ReferenceController != null
+                        ? _state.ReferenceController.GetPosition()
+                        : _program.Me.GetPosition();
+                    double radius = _state.Collision_Bounding_Radius_Meters;
+                    if (radius < 1) radius = 50;
+                    double radiusSq = radius * radius;
+                    for (int n = 0; n < 4; n++)
+                    {
+                        IMyTerminalBlock block = _state.Blocks[_crawlIndex++];
+                        if (Vector3D.DistanceSquared(block.GetPosition(), origin) <= radiusSq)
+                        {
+                            RecordPosition(block);
+                            ScanCollisionBounds(block);
+                        }
+                        if (_crawlIndex >= _state.Blocks.Count)
+                        {
+                            _crawlIndex = 0;
+                            PublishCollisionBounds();
+                            break;
+                        }
+                    }
                 }
                 if (_state.ReferenceController != null)
                     _state.CurrentShipPosition =
