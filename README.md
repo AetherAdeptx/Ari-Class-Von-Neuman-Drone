@@ -18,9 +18,10 @@ For a repeatable setup and Release build, run:
 ./build.sh
 ```
 
-The script restores NuGet packages and builds `VonNeuman.csproj` in Release
-configuration. It requires the .NET SDK and uses the MDK2 paths configured by
-the local MDK settings.
+The script restores NuGet packages, builds `VonNeuman.csproj` in Release
+configuration, and runs the MDK2 packager/minifier. If the .NET SDK is not
+already installed, it bootstraps a local copy under the ignored `.tools/`
+directory. It uses the MDK2 paths configured by the local settings.
 
 The build runs the Space Engineers whitelist analyzer, combines the C# source
 files, lightly minifies them to remain below the programmable block's
