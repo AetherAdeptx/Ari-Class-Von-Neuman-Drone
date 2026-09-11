@@ -48,8 +48,8 @@ eval "$dotnet_cmd build VonNeuman.csproj -c Release --no-restore"
 
 if [[ -f "$project_dir/mdk.local.ini" ]]; then
   output_dir="$(sed -n 's/^output=//p' "$project_dir/mdk.local.ini" | head -n1)"
-  if [[ -n "$output_dir" && -f "$output_dir/VonNeuman.cs" ]]; then
-    cp "$output_dir/VonNeuman.cs" "$project_dir/build scripts/VonNeuman.cs"
+  if [[ -n "$output_dir" && -f "$output_dir/VonNeuman/script.cs" ]]; then
+    cp "$output_dir/VonNeuman/script.cs" "$project_dir/build scripts/VonNeuman.cs"
   fi
 fi
 

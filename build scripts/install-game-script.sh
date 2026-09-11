@@ -8,5 +8,6 @@ if [[ -z "$target" ]]; then
 fi
 [[ -n "$target" ]] || { echo "ERROR: Space Engineers IngameScripts/local directory not found." >&2; exit 1; }
 src="$root/build scripts/VonNeuman.cs"
+[[ -f "$src" ]] || src="$(find "$root" -type f -path '*/VonNeuman/script.cs' | head -n1)"
 [[ -n "$src" ]] || { echo "ERROR: packed VonNeuman script not found; run ./build.sh first." >&2; exit 1; }
 mkdir -p "$target"; cp "$src" "$target/VonNeuman.cs"; echo "Installed VonNeuman.cs to $target"
