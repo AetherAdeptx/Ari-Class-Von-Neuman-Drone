@@ -9,6 +9,16 @@ It is configured for the local Steam/Proton installation on this computer.
 dotnet build
 ```
 
+For a repeatable setup and Release build, run:
+
+```bash
+./build.sh
+```
+
+The script restores NuGet packages and builds `VonNeuman.csproj` in Release
+configuration. It requires the .NET SDK and uses the MDK2 paths configured by
+the local MDK settings.
+
 The build runs the Space Engineers whitelist analyzer, combines the C# source
 files, lightly minifies them to remain below the programmable block's
 100,000-character limit, and writes the finished script into the game's local
